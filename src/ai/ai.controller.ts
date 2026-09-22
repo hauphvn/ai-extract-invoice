@@ -1,7 +1,12 @@
 import {
   BadRequestException,
   Body,
-  Controller, Get, Param,
+  Controller,
+  FileTypeValidator,
+  Get,
+  MaxFileSizeValidator,
+  Param,
+  ParseFilePipe,
   Post,
   Res,
   UploadedFile,
@@ -24,7 +29,7 @@ export class AiController {
     // Inject queue
     @InjectQueue('invoice-queue')
     private readonly invoiceQueue: Queue,
-    ) {}
+  ) {}
 
   @Post('extract-invoice')
   async extractInvoice(@Body() body: ExtraRequestDto): Promise<InvoiceDto> {
@@ -42,7 +47,21 @@ export class AiController {
   @Post('extract-invoice-image')
   @UseInterceptors(FileInterceptor('file')) // Sử dụng interceptor để xử lý file upload
   async extractImageInvoice(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          // Giới hạn loại file được phép upload tối đa 5MB
+          new MaxFileSizeValidator({
+            maxSize: 5 * 1024 * 1024, // 5MB
+          }),
+          // Chấp nhận ảnh png, jpeg, jpg, webp
+          new FileTypeValidator({
+            fileType: /(image\/png|image\/jpeg|image\/jpg|image\/webp)$/,
+          })
+        ],
+      }),
+    )
+    file: Express.Multer.File,
   ): Promise<MultimodalExtractionResult> {
     if (!file) {
       throw new BadRequestException(
@@ -55,14 +74,14 @@ export class AiController {
   // Api liên quan queue
   @Post('jobs/extract')
   async createExtractJob(@Body() body: ExtraRequestDto) {
-    if(!body.text){
+    if (!body.text) {
       throw new BadRequestException('Trường text không được bỏ trống');
     }
 
     // Đưa job vào hàng đợi, với cấu hình tự thử lại 3 lần nếu lỗi
     const job = await this.invoiceQueue.add(
       'process-invoice',
-      {rawText: body.text},
+      { rawText: body.text },
       {
         attempts: 3,
         backoff: {
@@ -70,13 +89,13 @@ export class AiController {
           delay: 5000, // 5 giây cho lần thử đầu tiên, sau đó tăng dần
         },
         removeOnComplete: false, // Giữ lại job sau khi hoàn thành để có thể xem kết quả
-      }
+      },
     );
     return {
       message: 'Tác vụ đã được tiếp nhận và đang được xử lý.',
       jobId: job.id,
-      status: 'pending'
-    }
+      status: 'pending',
+    };
   }
 
   // Endpoint: tra cứu trạng thái và lấy dữ liệu của job

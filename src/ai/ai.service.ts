@@ -152,7 +152,7 @@ export class AiService {
 
     // 1. Chuyển đổi fileBuffer thành base64
     const base64Image = fileBuffer.toString('base64');
-    const dataUrl = `data:${mimeType};base64,${base64Image}}`;
+    const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
     try {
       const response = await this.openapi.chat.completions.parse({
