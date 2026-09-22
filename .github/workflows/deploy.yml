@@ -46,7 +46,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd "${{ secrets.VPS_PROJECT_PATH }}" || exit 1
+            set -e # Dừng script nếu có lỗi xảy ra
+            cd "${{ secrets.VPS_PROJECT_PATH }}"
             # In đường dẫn hiện tại để kiểm tra 
             pwd
             git pull origin main
