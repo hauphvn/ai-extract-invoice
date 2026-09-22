@@ -1,0 +1,12 @@
+# Bỏ qua các thư mục phụ thuộc và file build cục bộ
+node_modules
+dist
+coverage
+
+# Bỏ qua lịch sử git và file môi trường cục bộ
+.git
+.env
+.env.local
+
+# Bỏ qua file nhật ký lỗi
+npm-debug.log

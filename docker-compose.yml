@@ -1,0 +1,40 @@
+  services:
+    # 1. Dịch vụ hàng đợi và lưu trữ bộ nhớ tạm Redis
+    redis:
+      image: redis:alpine
+      container_name: ai_redis_queue
+      restart: always
+      ports:
+        - "6379:6379"
+      volumes:
+        - redis_data:/data
+      networks:
+        - ai_network
+
+    # 2. Dịch vụ ứng dụng NestJS
+    api:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: ai_api_service
+      restart: always
+      ports:
+        - "3000:3000"
+      environment:
+        - PORT=3000
+        - REDIS_HOST=redis
+        - REDIS_PORT=6379
+        - OPENAI_API_KEY=${OPENAI_API_KEY}
+      depends_on:
+        - redis
+      networks:
+        - ai_network
+
+  # Định nghĩa vùng lưu trữ dữ liệu bền vững cho Redis
+  volumes:
+    redis_data:
+
+  # Định nghĩa mạng nội bộ kết nối giữa NestJS và Redis
+  networks:
+    ai_network:
+      driver: bridge
