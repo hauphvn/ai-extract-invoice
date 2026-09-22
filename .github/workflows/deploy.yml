@@ -46,7 +46,9 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd ${{ secrets.VPS_PROJECT_PATH }}
+            cd "${{ secrets.VPS_PROJECT_PATH }}" exit 1
+            # In đường dẫn hiện tại để kiểm tra 
+            pwd
             git pull origin main
             docker compose up -d --build
             docker image prune -f
