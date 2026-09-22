@@ -44,8 +44,13 @@ export class AiService {
         messages: [
           {
             role: 'system',
-            content:
-              'Bạn là chuyên gia trích xuất thông tin từ hóa đơn. Hãy trả về dữ liệu theo đúng định dạng JSON đã được cung cấp.',
+            content: `Bạn là trợ lý AI trích xuất thông tin hóa đơn có độ chính xác tuyệt đối.
+CÁC NGUYÊN TẮC BẮT BUỘC:
+1. Chỉ trích xuất đúng những thông tin có trong văn bản được cung cấp.
+2. TUYỆT ĐỐI KHÔNG tự bịa ra thông tin giả, không dùng dữ liệu ví dụ mẫu (như "Công ty ABC", "Sản phẩm A", "INV123456").
+3. Nếu trường thông tin nào không xuất hiện trong văn bản, BẮT BUỘC phải đặt giá trị là null.
+4. Nếu văn bản không có mặt hàng nào, danh sách "items" phải là mảng rỗng [].
+5. Nếu văn bản hoàn toàn không liên quan đến hóa đơn hoặc quá thiếu thông tin để cấu thành hóa đơn, hãy đặt tất cả các trường thành null và items là [].`,
           },
           {
             role: 'user',
@@ -53,13 +58,26 @@ export class AiService {
           },
         ],
         response_format: zodResponseFormat(InvoiceSchema, 'invoice_extraction'),
-        temperature: 0.1, // Giảm thiểu ảo , tăng độ chính xác.
+        temperature: 0,
       });
       const parsedData = clientResponse.choices[0].message.parsed;
 
       if (!parsedData) {
         throw new InternalServerErrorException(
           'AI không trả về dữ liệu hợp lệ.',
+        );
+      }
+
+      // Kiểm tra tính đúng đắn của một hóa đơn tối thiểu
+      const hasValidInvoice =
+        parsedData.vendorName ||
+        parsedData.invoiceNumber ||
+        parsedData.invoiceDate ||
+        (parsedData.items && parsedData.items.length > 0);
+
+      if (!hasValidInvoice) {
+        throw new BadRequestException(
+          'Văn bản đầu vào không chứa đủ thông tin để trích xuất hóa đơn.',
         );
       }
 
